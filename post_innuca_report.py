@@ -19,15 +19,15 @@ DESCRIPTION
     USAGE:
 
     # Report generation
-    post_innuca_report.py -s "Streptococcus agalactiae" -i path/to/assemblies/dir \ 
-                            -o path/to/output/dir --cpu 6 --total_bps 2300000 \
+    post_innuca_report.py -s "Streptococcus agalactiae" -i path/to/assemblies/dir
+                            -o path/to/output/dir --cpu 6 --total_bps 2300000
                             --nr_contigs 350 --gc_content 0.45
                             
     
     # Report analysis
-    post_innuca_report.py -s "Streptococcus agalactiae" --pilon_report path/to/pilon/report \
-                            --mlst_report path/to/mlst/report -o path/to/output/dir \
-                            --cpu 6 --total_bps 2300000 \
+    post_innuca_report.py -s "Streptococcus agalactiae" --pilon_report path/to/pilon/report
+                            --mlst_report path/to/mlst/report -o path/to/output/dir
+                            --cpu 6 --total_bps 2300000
                             --nr_contigs 350 --gc_content 0.45
 
     
@@ -36,8 +36,9 @@ DESCRIPTION
 
 import argparse
 import itertools
-import os
+import math
 from multiprocessing import Pool, cpu_count
+import os
 import shutil
 import subprocess
 
@@ -48,7 +49,7 @@ from Bio.SeqUtils import GC
 from Bio import SeqIO
 
 
-def is_fasta(filename: str):
+def is_fasta(filename):
     """ Checks if a file is a FASTA file.
 
         Args:
@@ -232,7 +233,7 @@ def analyse_report(report, mlst, total_bps, nr_contigs, gc_content):
         if record["Number of contigs"] > nr_contigs:
             result[record["Sample"]].append(["FAIL", "Nr_contigs"])
             
-        if record["GC content"] > gc_content:
+        if math.isclose(record["GC content"], gc_content):
             result[record["Sample"]].append(["FAIL", "GC_content"])
             
         if record["mlst"] != mlst:
@@ -432,6 +433,7 @@ def main(species, assemblies, output, pilon_report_path, mlst_report_path,
             return
         
         assemblies_file = check_if_list_or_folder(assemblies)
+        assemblies_file = check_if_list_or_folder("/home/pcerqueira/DATA/lobo_runs/GBS_SRA/batch7/pilon_1_9")
         
         listGenes = []
         with open(assemblies_file, "r") as gf:
@@ -448,7 +450,6 @@ def main(species, assemblies, output, pilon_report_path, mlst_report_path,
         # List to save the results of the multiprocessing
         assembly_analysis_results = []
         
-        
         print("Caculating assembly statistics...")
         p = Pool(processes = cpu_to_apply)
         r = p.map_async(analyse_assembly, listGenes, callback = assembly_analysis_results.append)
@@ -461,6 +462,11 @@ def main(species, assemblies, output, pilon_report_path, mlst_report_path,
         
         # Analyse results
         analysed_report = analyse_report(results, species_mlst, total_bps, nr_contigs, gc_content)
+        
+        # Print amount of Fails to console
+        fails = sum([fail[0].count("FAIL") for fail in analysed_report.values()])
+        
+        print("The analysis detected {} FAILS on the assemblies. Check the report for more details".format(fails))
         
         print("Writing report...")
         
