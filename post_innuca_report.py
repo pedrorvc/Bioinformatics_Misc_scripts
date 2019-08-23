@@ -433,7 +433,6 @@ def main(species, assemblies, output, pilon_report_path, mlst_report_path,
             return
         
         assemblies_file = check_if_list_or_folder(assemblies)
-        assemblies_file = check_if_list_or_folder("/home/pcerqueira/DATA/lobo_runs/GBS_SRA/batch7/pilon_1_9")
         
         listGenes = []
         with open(assemblies_file, "r") as gf:
@@ -455,7 +454,7 @@ def main(species, assemblies, output, pilon_report_path, mlst_report_path,
         r = p.map_async(analyse_assembly, listGenes, callback = assembly_analysis_results.append)
         r.wait()        
         
-        print("Analysing results...")
+        print("Analysing results...\n")
         
         # Flatten result nested list by one level
         results = flatten_list(assembly_analysis_results)
@@ -466,9 +465,9 @@ def main(species, assemblies, output, pilon_report_path, mlst_report_path,
         # Print amount of Fails to console
         fails = sum([fail[0].count("FAIL") for fail in analysed_report.values()])
         
-        print("The analysis detected {} FAILS on the assemblies. Check the report for more details".format(fails))
+        print("The analysis detected {0} FAILS on a total of {1} assemblies. Check the report for more details.\n".format(fails, len(listGenes)))
         
-        print("Writing report...")
+        print("Writing report...\n")
         
         # Convert dictionary into pandas DataFrame
         report = pd.DataFrame(results)
