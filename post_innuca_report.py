@@ -200,6 +200,8 @@ def get_species_dict():
     
     # Convert the dataframe to dictionary
     species_dict = species_scheme_concat.set_index('Species')["Scheme"].to_dict()
+
+    species_dict = {k.strip(): v for k,v in species_dict.items()}
     
     return species_dict
 
@@ -405,19 +407,6 @@ def analyse_assembly(assembly):
                "Missing Data" : missing_data, "mlst" : mlst}
     
     return results
-
-#species = 'Streptococcus agalactiae'
-#output = 'test_stats'
-#assemblies = 'test'
-#pilon_report_path = False
-#mlst_report_path = False
-#cpu = 6
-#nr_contigs = 350
-#min_bps = 1
-#max_bps = 9999999999999
-#min_gc = 0.0
-#max_gc = 1.0
-#pfile = 'species_parameters.tsv'
 
 
 def main(species, output, assemblies, pilon_report_path, mlst_report_path,
