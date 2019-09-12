@@ -30,7 +30,10 @@ DESCRIPTION
 """
 
 import os
+import bz2
+import gzip
 import shutil
+import zipfile
 import argparse
 import itertools
 import subprocess
@@ -43,6 +46,61 @@ from Bio import SeqIO
 from Bio.SeqUtils import GC
 
 
+COPEN = {
+    "gz": gzip.open,
+    "bz2": bz2.open,
+    "zip": zipfile.ZipFile
+}
+
+MAGIC_DICT = {
+    b"\x1f\x8b\x08": "gz",
+    b"\x42\x5a\x68": "bz2",
+    b"\x50\x4b\x03\x04": "zip"
+}
+
+"""
+dict: Dictionary containing the binary signatures for three compression formats
+(gzip, bzip2 and zip).
+"""
+
+
+def guess_file_compression(file_path, magic_dict=None):
+    """Guesses the compression of an input file.
+    This function guesses the compression of a given file by checking for
+    a binary signature at the beginning of the file. These signatures are
+    stored in the :py:data:`MAGIC_DICT` dictionary. The supported compression
+    formats are gzip, bzip2 and zip. If none of the signatures in this
+    dictionary are found at the beginning of the file, it returns ``None``.
+    
+    Args:
+        file_path : str
+            Path to input file.
+        magic_dict : dict, optional
+            Dictionary containing the signatures of the compression types. The
+            key should be the binary signature and the value should be the
+            compression format. If left ``None``, it falls back to
+            :py:data:`MAGIC_DICT`.
+    Returns:
+        file_type : str or None
+            If a compression type is detected, returns a string with the format.
+            If not, returns ``None``.
+    """
+
+    if not magic_dict:
+        magic_dict = MAGIC_DICT
+
+    max_len = max(len(x) for x in magic_dict)
+
+    with open(file_path, "rb") as f:
+        file_start = f.read(max_len)
+
+    for magic, file_type in magic_dict.items():
+        if file_start.startswith(magic):
+            return file_type
+
+    return None
+
+
 def is_fasta(filename):
     """ Checks if a file is a FASTA file.
 
@@ -53,12 +111,36 @@ def is_fasta(filename):
             True if FASTA file,
             False otherwise
     """
+    
+    
+    try:
+        with open(filename, "r") as handle:
+            fasta = SeqIO.parse(handle, "fasta")
+    
+            # returns True if FASTA file, False otherwise
+            return any(fasta)
+    
+    except UnicodeDecodeError:
+        return False
 
-    with open(filename, "r") as handle:
-        fasta = SeqIO.parse(handle, "fasta")
+def is_fasta_gz(filename):
+    """ Checks if a file is a FASTA GZ file.
+    
+        Args:
+            filename (str): the full path to the FASTA file
 
+        Returns:
+            True if FASTA file,
+            False otherwise
+    """
+    
+    with gzip.open(filename, "rt") as handle:
+        fasta_gz = SeqIO.parse(handle, "fasta")
+    
         # returns True if FASTA file, False otherwise
-        return any(fasta)
+        return any(fasta_gz)
+
+    
 
 
 def check_if_list_or_folder(folder_or_list):
@@ -91,6 +173,10 @@ def check_if_list_or_folder(folder_or_list):
 
             # check if file is a FASTA file
             if is_fasta(genepath):
+                fasta_files.append(os.path.abspath(genepath))
+            
+            # check if file is a FASTA file
+            elif is_fasta_gz(genepath):
                 fasta_files.append(os.path.abspath(genepath))
 
         # if there are FASTA files
@@ -360,13 +446,26 @@ def analyse_assembly(assembly):
     """
 
     assembly_file = assembly
-
+  
     # Get the sample name from the file
     sample = os.path.basename(assembly_file).split(".")[0]
-
-    # Get the records of the assembly file
-    records = list(SeqIO.parse(assembly_file, "fasta"))
-
+    
+    # Guess the file compression
+    ftype = guess_file_compression(assembly_file)
+    
+    # File is not compressed
+    if ftype is None:    
+        # Get the records of the assembly file
+        records = list(SeqIO.parse(assembly_file, "fasta"))
+    
+    # This can guess the compression of gz, bz2 and zip.
+    else:      
+        records = []
+        
+        with COPEN[ftype](assembly_file, "rt") as af:
+            for record in SeqIO.parse(af, "fasta"):
+                records.append(record)
+    
     # Calculate the GC content
     all_gc_content = [GC(seq.seq) for seq in records]
     gc_content = np.mean(all_gc_content) / 100
@@ -411,9 +510,10 @@ def main(species, output, assemblies, pilon_report_path, mlst_report_path,
 
     # get species mlst scheme name
     species_dict = get_species_dict()
+#    print(species_dict)
 
     # check if output directory exists
-    if not os.path.isdir(output):
+    if not os.path.exists(output):
         os.mkdir(output)
 
     try:
@@ -441,6 +541,7 @@ def main(species, output, assemblies, pilon_report_path, mlst_report_path,
             raise Exception("mlst is not on your PATH. Stopping execution...")
 
         assemblies_file = check_if_list_or_folder(assemblies)
+
 
         listGenes = []
         with open(assemblies_file, "r") as gf:
@@ -492,7 +593,6 @@ def main(species, output, assemblies, pilon_report_path, mlst_report_path,
                               nr_contigs, min_bps, max_bps, min_gc, max_gc)
 
     print("Execution Finished")
-    return
 
 
 def parse_arguments():
