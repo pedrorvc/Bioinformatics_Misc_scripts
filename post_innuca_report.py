@@ -37,7 +37,9 @@ import zipfile
 import argparse
 import itertools
 import subprocess
+import statistics as stats
 from multiprocessing import Pool, cpu_count
+
 
 import numpy as np
 import pandas as pd
@@ -409,32 +411,28 @@ def pilon_report_analysis(species_mlst, assemblies, output, pilon_report_path, m
     write_final_report(final_report, result, output)
 
 
-def calc_n50(sizes):
+def calc_n50(contig_sizes):
     """ Calculates the N50 of an assembly.
 
         Args:
-            sizes (list): Contains the sizes of the contigs from an assembly file
+            contig_sizes (list): Contains the sizes of the contigs from an assembly file
 
         Returns:
-            n50 (int)
+            l (int): Calculated n50
     """
+    
+    # Sort the contig sizes in descending order
+    contig_sizes.sort(reverse=True)
+    
+    # Calculate n50
+    s = sum(contig_sizes)
+    limit = s * 0.5
+    for l in contig_sizes:
+        s -= l
+        if s <= limit:
+            return l
 
-    # Calculate the cumulative sum of the sizes
-    csum = np.cumsum(sizes)
-
-    # Get half of the sum of sizes
-    n2 = int(sum(sizes) / 2)
-
-    # Get index for csum >= N/2
-    csumn2 = min(csum[csum >= n2])
-    idx = np.where(csum == csumn2)
-
-    # Get the N50
-    n50 = sizes[int(idx[0])]
-
-    return n50
-
-
+        
 def analyse_assembly(assembly):
     """ Analyses an assembly file
 
@@ -468,7 +466,7 @@ def analyse_assembly(assembly):
     
     # Calculate the GC content
     all_gc_content = [GC(seq.seq) for seq in records]
-    gc_content = np.mean(all_gc_content) / 100
+    gc_content = stats.mean(all_gc_content) / 100
 
     # Get the total number of contigs in the assembly file
     nr_contigs = len(records)
@@ -477,7 +475,7 @@ def analyse_assembly(assembly):
     sizes = [len(seq) for seq in records]
 
     # Calculate the average contig size
-    avg_size = np.average(sizes)
+    avg_size = stats.mean(sizes)
 
     # Calculate the total assembly length
     total_length = sum(sizes)
