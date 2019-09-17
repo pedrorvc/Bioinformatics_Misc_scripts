@@ -200,7 +200,7 @@ def check_if_list_or_folder(folder_or_list):
 
 
 def verify_cpu_usage(cpu_to_use):
-    """ Verify the cpu usage for chewBBACA.
+    """ Verify the cpu usage for the script.
 
         Args:
             cpu_to_use (int): the number of cpu provided to post_innuca_report
