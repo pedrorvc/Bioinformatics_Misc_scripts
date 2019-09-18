@@ -15,6 +15,11 @@ To generate a report simply give it the path to the directory where teh assembly
     % post_innuca_report.py -s "Streptococcus agalactiae" -i path/to/assemblies/dir \ 
                             -o path/to/output/dir --cpu 6 --total_bps 2300000 \
                             --nr_contigs 350 --gc_content 0.45
+
+                            OR
+
+    % post_innuca_report.py -s "Streptococcus agalactiae" -i path/to/assemblies/dir
+                            -o path/to/output/dir --cpu 6 --pf species_parameters.tsv     
                             
 
 #### Report analysis
