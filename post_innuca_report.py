@@ -247,7 +247,7 @@ def track_job(job, update_interval=3):
     """
     
     while job._number_left > 0:
-        print("Files remaining = {0}".format(
+        print("Tasks remaining = {0}".format(
         job._number_left * job._chunksize))
         time.sleep(update_interval)
 
@@ -502,7 +502,8 @@ def analyse_assembly(assembly):
     n50 = calc_n50(sizes)
 
     # Determine missing data
-    missing_data = sum([rec.seq.count("N") for rec in records])
+    proportion_missing_data = (sum([rec.seq.count("N") for rec in records]) / 
+                               total_length)
 
     # Determine the allelic profile and save the identified species
     p = subprocess.run(["mlst", assembly_file], capture_output=True)
@@ -512,7 +513,7 @@ def analyse_assembly(assembly):
     results = {"Sample": sample, "Number of contigs": nr_contigs,
                "Average contig size": avg_size, "N50": n50,
                "Total assembly length": total_length, "GC content": gc_content,
-               "Missing Data": missing_data, "mlst": mlst}
+               "Missing Data": round(proportion_missing_data, ndigits=4), "mlst": mlst}
 
     return results
 
