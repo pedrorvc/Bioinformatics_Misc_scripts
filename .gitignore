@@ -15,4 +15,5 @@ __pycache__/
 # test files
 .fasta
 .txt
-
+.directory
+/test_assemblies
