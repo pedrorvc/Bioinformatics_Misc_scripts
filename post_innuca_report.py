@@ -21,6 +21,11 @@ DESCRIPTION
     post_innuca_report.py -s "Streptococcus agalactiae" -i path/to/assemblies/dir
                             -o path/to/output/dir --cpu 6 --total_bps 2300000
                             --nr_contigs 350 --gc_content 0.45
+                            
+                            OR
+                            
+     post_innuca_report.py -s "Streptococcus agalactiae" -i path/to/assemblies/dir
+                            -o path/to/output/dir --cpu 6 --pf species_parameters.tsv                       
 
     # Report analysis
     post_innuca_report.py -s "Streptococcus agalactiae" --pilon_report path/to/pilon/report
@@ -32,6 +37,7 @@ DESCRIPTION
 import os
 import bz2
 import gzip
+import time
 import shutil
 import zipfile
 import argparse
@@ -39,7 +45,6 @@ import itertools
 import subprocess
 import statistics as stats
 from multiprocessing import Pool, cpu_count
-
 
 import numpy as np
 import pandas as pd
@@ -233,6 +238,18 @@ def verify_cpu_usage(cpu_to_use):
               + str(cpu_to_use) + '/' + str(total_cpu) + "). This may affect your system responsiveness.")
 
     return cpu_to_use
+
+
+    
+
+def track_job(job, update_interval=3):
+    """ Tracks multiprocessing jobs
+    """
+    
+    while job._number_left > 0:
+        print("Files remaining = {0}".format(
+        job._number_left * job._chunksize))
+        time.sleep(update_interval)
 
 
 def flatten_list(list_to_flatten):
@@ -442,7 +459,8 @@ def analyse_assembly(assembly):
         Returns:
             results (dict): Contains the results of the analysis
     """
-
+    
+    
     assembly_file = assembly
   
     # Get the sample name from the file
@@ -508,7 +526,6 @@ def main(species, output, assemblies, pilon_report_path, mlst_report_path,
 
     # get species mlst scheme name
     species_dict = get_species_dict()
-#    print(species_dict)
 
     # check if output directory exists
     if not os.path.exists(output):
@@ -552,16 +569,19 @@ def main(species, output, assemblies, pilon_report_path, mlst_report_path,
             os.remove("listGenes.txt")
         except Exception:
             pass
-
+        
         # List to save the results of the multiprocessing
         assembly_analysis_results = []
 
-        print("Calculating assembly statistics...")
+        print("Calculating assembly statistics...\n")
         p = Pool(processes=cpu_to_apply)
         r = p.map_async(analyse_assembly, listGenes, callback=assembly_analysis_results.append)
+        
+        track_job(r, 3)
+
         r.wait()
 
-        print("Analysing results...\n")
+        print("\nAnalysing results...\n")
 
         # Flatten result nested list by one level
         results = flatten_list(assembly_analysis_results)
