@@ -130,6 +130,7 @@ def is_fasta(filename):
     except UnicodeDecodeError:
         return False
 
+
 def is_fasta_gz(filename):
     """ Checks if a file is a FASTA GZ file.
     
@@ -146,8 +147,6 @@ def is_fasta_gz(filename):
     
         # returns True if FASTA file, False otherwise
         return any(fasta_gz)
-
-    
 
 
 def check_if_list_or_folder(folder_or_list):
@@ -239,8 +238,6 @@ def verify_cpu_usage(cpu_to_use):
 
     return cpu_to_use
 
-
-    
 
 def track_job(job, update_interval=3):
     """ Tracks multiprocessing jobs
